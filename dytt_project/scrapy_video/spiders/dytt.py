@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
-import scrapy
 import json
 import re
+import scrapy
+
+from scrapy_video.items import VideoItem
 
 
 class DyttSpider(scrapy.Spider):
+    """电影天堂爬虫"""
     name = 'dytt'
     allowed_domains = ['www.dytt8.net', 'www.ygdy8.net']
 
-    start_urls = ['http://www.dytt8.net/']
+    start_urls = ['https://www.dytt8.net/html/gndy/dyzz/20181108/57761.html']
 
-    def parse(self, response):
-        """分析首页"""
-        # 最新电影
-        latest_moive_link = response.xpath(
-            '//*[@id="menu"]/div/ul/li[1]/a/@href').extract_first()
-        yield response.follow(
-            latest_moive_link, callback=self.parse_latest_movie)
+    # def parse(self, response):
+    #     """分析首页"""
+    #     # 最新电影
+    #     latest_moive_link = response.xpath(
+    #         '//*[@id="menu"]/div/ul/li[1]/a/@href').extract_first()
+    #     yield response.follow(
+    #         latest_moive_link, callback=self.parse_latest_movie)
 
     def parse_latest_movie(self, response):
         """抓取最新电影列表"""
@@ -31,9 +34,10 @@ class DyttSpider(scrapy.Spider):
         # next_page = movie_list.xpath('./div//a/@href').extract_first()
         # yield response.follow(next_page, self.parse)
 
-    def parse_moive_detail(self, response):
+    # def parse_moive_detail(self, response):
+    def parse(self, response):
         """抓取电影详细信息"""
-        movie = dict()
+        movie = VideoItem()
         info = response.xpath('//*[@id="Zoom"]')
         pictures = info.xpath('.//img/@src').extract()
         # 海报
@@ -50,37 +54,18 @@ class DyttSpider(scrapy.Spider):
             './/text()[normalize-space()] [contains(.,"\u3000")]').extract()
         texts = [s.replace('\u3000', '') for s in texts]
         key_texts = [s.strip().replace('◎', '') for s in texts if "◎" in s]
-        m = {
-            "译名": "translation",
-            "片名": "title",
-            "年代": "age",
-            "产地": "origin_area",
-            "类别": "category",
-            "语言": "lang",
-            "字幕": "subtitles",
-            "上映日期": "premiere",
-            "IMDb评分": "imdb_rate",
-            "豆瓣评分": "douban_rate",
-            "文件格式": "file_format",
-            "视频尺寸": "chicun",
-            "片长": "length",
-            "导演": "director",
-            "主演": "actors",
-            "标签": "tags",
-        }
-        for (k, v) in m.items():
+
+        for (k, v) in movie.fields.items():
             for s in key_texts:
-                if s.startswith(k):
-                    movie[v] = s[len(k):]
+                if s.startswith(v["cn"]):
+                    movie[k] = s[len(k):]
                     break
 
         movie["translation"] = [
             s.strip() for s in movie["translation"].split("/")
         ]
         movie["title"] = [s.strip() for s in movie["title"].split("/")]
-        movie["origin_area"] = [
-            s.strip() for s in movie["origin_area"].split("/")
-        ]
+        movie["origin"] = [s.strip() for s in movie["origin"].split("/")]
         movie["category"] = [s.strip() for s in movie["category"].split("/")]
         movie["lang"] = [s.strip() for s in movie["lang"].split("/")]
         movie["premiere"] = [s.strip() for s in movie["premiere"].split("/")]
@@ -93,8 +78,8 @@ class DyttSpider(scrapy.Spider):
         # 获奖的文本
         prize_texts = {
             s
-            for s in pure_texts if re.search(
-                r"百想艺术大赏|青龙奖|电影大奖|技术奖|金狮奖|电影节|金马|金鹿奖|长春电影节|电影奖|主竞赛单元|最佳", s)
+            for s in pure_texts
+            if re.search("|".join(movie.fields["prize"]["names"]), s)
         }
         # 剩余的演员
         for s in pure_texts.difference(prize_texts):
@@ -102,11 +87,11 @@ class DyttSpider(scrapy.Spider):
                 movie["actors"].append(s)
 
         # 简介
-        movie["Introduction"] = "\n".join([
+        movie["introduction"] = "\n".join([
             s.strip() for s in set.difference(pure_texts, prize_texts,
                                               set(movie["actors"]))
         ])
         # 获奖
         movie["prize"] = list(prize_texts)
 
-        print(json.dumps(movie, indent=4, ensure_ascii=False))
+        print(json.dumps(dict(movie), indent=4, ensure_ascii=False))
