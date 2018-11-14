@@ -2,9 +2,11 @@
 import json
 import re
 import scrapy
+import logging
 
 from scrapy_video.items import VideoItem
 
+logger = logging.getLogger(__name__)
 
 class DyttSpider(scrapy.Spider):
     """电影天堂爬虫"""
@@ -58,7 +60,7 @@ class DyttSpider(scrapy.Spider):
         for (k, v) in movie.fields.items():
             for s in key_texts:
                 if s.startswith(v["cn"]):
-                    movie[k] = s[len(k):]
+                    movie[k] = s[len(v["cn"]):]
                     break
 
         movie["translation"] = [
