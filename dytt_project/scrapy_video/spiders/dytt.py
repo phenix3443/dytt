@@ -2,11 +2,9 @@
 import json
 import re
 import scrapy
-import logging
 
 from scrapy_video.items import VideoItem
 
-logger = logging.getLogger(__name__)
 
 class DyttSpider(scrapy.Spider):
     """电影天堂爬虫"""
@@ -35,9 +33,10 @@ class DyttSpider(scrapy.Spider):
 
         # next_page = movie_list.xpath('./div//a/@href').extract_first()
         # yield response.follow(next_page, self.parse)
-
-    # def parse_moive_detail(self, response):
     def parse(self, response):
+        self.logger.debug(self.crawler.settings.get("MYSQL")["dytt"])
+        
+    def parse_moive_detail(self, response):
         """抓取电影详细信息"""
         movie = VideoItem()
         info = response.xpath('//*[@id="Zoom"]')
@@ -97,3 +96,6 @@ class DyttSpider(scrapy.Spider):
         movie["prize"] = list(prize_texts)
 
         print(json.dumps(dict(movie), indent=4, ensure_ascii=False))
+        
+        yield movie
+        

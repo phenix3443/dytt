@@ -88,3 +88,13 @@ ROBOTSTXT_OBEY = True
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+MYSQL = {
+    "dytt":{
+        "host":"127.0.0.1",
+        "port":3306,
+        "user":"dytt",
+        "password":"dytt",
+        "database":"dytt",
+    }
+}
