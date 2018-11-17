@@ -34,8 +34,8 @@ class DyttSpider(scrapy.Spider):
         # next_page = movie_list.xpath('./div//a/@href').extract_first()
         # yield response.follow(next_page, self.parse)
     def parse(self, response):
-        self.logger.debug(self.crawler.settings.get("MYSQL")["dytt"])
-        
+        self.logger.debug(response.headers)
+
     def parse_moive_detail(self, response):
         """抓取电影详细信息"""
         movie = VideoItem()
@@ -96,6 +96,5 @@ class DyttSpider(scrapy.Spider):
         movie["prize"] = list(prize_texts)
 
         print(json.dumps(dict(movie), indent=4, ensure_ascii=False))
-        
+
         yield movie
-        
