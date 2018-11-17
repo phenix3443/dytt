@@ -14,7 +14,6 @@ BOT_NAME = 'scrapy_video'
 SPIDER_MODULES = ['scrapy_video.spiders']
 NEWSPIDER_MODULE = 'scrapy_video.spiders'
 
-
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'scrapy_video (+http://www.yourdomain.com)'
 
@@ -52,9 +51,9 @@ ROBOTSTXT_OBEY = True
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'scrapy_video.middlewares.ScrapyVideoDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+    'scrapy_video.middlewares.RandomUserAgentMiddleware': 543,
+}
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html
@@ -90,11 +89,11 @@ ROBOTSTXT_OBEY = True
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 MYSQL = {
-    "dytt":{
-        "host":"127.0.0.1",
-        "port":3306,
-        "user":"dytt",
-        "password":"dytt",
-        "database":"dytt",
+    "dytt": {
+        "host": "127.0.0.1",
+        "port": 3306,
+        "user": "dytt",
+        "password": "dytt",
+        "database": "dytt",
     }
 }
