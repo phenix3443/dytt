@@ -10,6 +10,8 @@ scrapy = "*"
 scrapyd = "*"
 selenium = "*"
 ipython = "*"
+scrapy-redis = "*"
+scrapyd-client = "*"
 
 [dev-packages]
 
