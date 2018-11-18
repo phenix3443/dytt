@@ -28,7 +28,7 @@ class DyttSpider(scrapy.Spider):
 
         yield response.follow(
             # "http://www.ygdy8.net/html/gndy/dyzz/20091004/22009.html",
-            "http://www.ygdy8.net/html/gndy/dyzz/20091028/22542.html",
+            "http://www.ygdy8.net/html/gndy/dyzz/20091009/22123.html",
             callback=self.parse_moive_detail)
 
     def parse_latest_movie(self, response):
@@ -62,118 +62,125 @@ class DyttSpider(scrapy.Spider):
         movie["ftp_link"] = info.xpath(
             './/a[contains(@href,"ftp://")]/@href').extract_first()
 
-        texts = info.xpath('.//text()[normalize-space()]').extract()
-        self.logger.debug(texts)
-        texts = [s.replace('\u3000', '') for s in texts]
+        texts = info.xpath('.//text()[normalize-space(.)]').extract()
 
-        key_texts = [s.strip().replace('◎', '') for s in texts if "◎" in s]
+        # 去掉特殊符号
+        token = ["\xa0","\u3000","ie","经典电影","幕后制作","mp4视频下载","淘宝"]
+        for t in token:
+            texts = [s.replace(t, '') for s in texts]  
+
+        texts = [s.strip() for s in texts] # 去掉首尾空格
+        texts = [s for s in texts if s ] # 去掉空字符串
+
+        # 去掉特殊行
+        texts = [s for s in texts if not re.match(".*(ftp://|下载地址|磁力链).*",s)]
+        self.logger.debug(texts)
 
         patterns = {
             "translation": {
-                "start": "译名",
+                "start": "◎译名",
                 "div": "/"
             },
             "title": {
-                "start": "片名",
+                "start": "◎片名",
                 "div": "/"
             },
             "age": {
-                "start": "年代",
+                "start": "◎年代",
             },
             "origin": {
-                "start": "产地|国家",
+                "start": "◎产地|◎国家",
                 "div": "/"
             },
             "category": {
-                "start": "类别",
+                "start": "◎类别",
                 "div": "/"
             },
             "lang": {
-                "start": "语言",
+                "start": "◎语言",
                 "div": "/"
             },
             "subtitles": {
-                "start": "字幕",
+                "start": "◎字幕",
                 "div": "/"
             },
             "premiere": {
-                "start": "上映日期"
+                "start": "◎上映日期"
             },
             "imdb_rate": {
-                "start": "IMDb评分"
+                "start": "◎IMDb评分"
             },
             "douban_rate": {
-                "start": "豆瓣评分"
+                "start": "◎豆瓣评分"
             },
             "file_format": {
-                "start": "文件格式"
+                "start": "◎文件格式"
             },
             "chicun": {
-                "start": "视频尺寸"
+                "start": "◎视频尺寸"
             },
             "length": {
-                "start": "片长"
+                "start": "◎片长"
             },
             "director": {
-                "start": "导演",
+                "start": "◎导演",
                 "div": "/"
             },
             "actors": {
-                "start": "主演",
-                "div": "/"
+                "start": "◎主演",
+                "div": "/",
             },
             "tags": {
-                "start": "类别",
+                "start": "◎标签",
                 "div": "|"
             },
+            "introduction":{
+                "start":"◎简介",
+                "div": "/",
+            },
+            "prize":{
+                "start":"◎获奖情况",
+                "div": "/",
+            }
         }
-        for (k, v) in patterns.items():
-            for s in key_texts:
+        # 标记各个字段的位置
+        for (idx,s) in enumerate(texts):
+            for (k, v) in patterns.items():
                 m = re.match(r"^({})(.*)".format(v["start"]), s)
                 if m:
-                    movie[k] = m.groups()[1]
-                    if "div" in v:
-                        movie[k] = [m.strip() for m in movie[k].split("/")]
+                    v["idx"] = idx
+
                     break
 
-        # 没有特殊标记的纯文本
-        pure_texts = {s.strip() for s in texts if ("◎" not in s and s.strip())}
+        for (k, v) in patterns.items():
+            if "idx" in v:
+                m = re.match(r"^({})(.*)".format(v["start"]), texts[v["idx"]])
+                movie[k] = m.groups()[1]
+                if "div" in v:
+                    movie[k] = [m.strip() for m in movie[k].split("/")]
 
-        # 获奖的文本
-        prize_names = [
-            "百想艺术大赏",
-            "青龙奖",
-            "电影大奖",
-            "技术奖",
-            "金狮奖",
-            "电影节",
-            "金马",
-            "金鹿奖",
-            "长春电影节",
-            "电影奖",
-            "主竞赛单元",
-            "最佳",
-        ]
-        # 奖项的文本作为集合
-        prize_texts = {
-            s
-            for s in pure_texts if re.search("|".join(prize_names), s)
-        }
+        # 演员字段
+        start = patterns["actors"]["idx"] + 1
+        end = patterns["introduction"]["idx"]
+        movie["actors"].extend(texts[start:end])
+        
+        # 简介字段
+        start = patterns["introduction"]["idx"] + 1
+        end = patterns["prize"]["idx"] if "idx" in patterns["prize"] else len(texts)
+        movie["introduction"].extend(texts[start:end])
+            
+        # 获奖情况
+        if "idx" in patterns["prize"]:
+            start = patterns["prize"]["idx"] + 1
+            movie["prize"].extend(texts[start:])
 
-        # 获奖
-        movie["prize"] = list(prize_texts)
-
-        # 集合差集计算剩余的演员
-        for s in pure_texts.difference(prize_texts):
-            if len(s) < 50 and (not re.search("改编自|最佳", s)):
-                movie["actors"].append(s)
-
-        # 集合差集计算简介
-        movie["introduction"] = "\n".join([
-            s.strip() for s in set.difference(pure_texts, prize_texts,
-                                              set(movie["actors"]))
-        ])
-
-        print(json.dumps(dict(movie), indent=4, ensure_ascii=False))
+        # 去掉特殊符号
+        for k in ["introduction","prize"]:
+            if k in movie:
+                movie[k] = [s for s in movie[k] if s] # 去掉空字符串
+                for t in ["◎"]:
+                    movie[k] = [s for s in movie[k] if t not in s]
+        
+        # print(json.dumps(dict(movie), indent=4, ensure_ascii=False))
 
         yield movie

@@ -88,6 +88,8 @@ DOWNLOADER_MIDDLEWARES = {
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
+FEED_EXPORT_ENCODING = "utf-8"
+
 MYSQL = {
     "dytt": {
         "host": "127.0.0.1",
