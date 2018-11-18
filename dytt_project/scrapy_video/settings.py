@@ -97,3 +97,11 @@ MYSQL = {
         "database": "dytt",
     }
 }
+
+# 添加分布式
+# SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+# DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+# REDIS_URL = "redis://127.0.0.1:6379/0"
+# SCHEDULER_QUEUE_CLASS = "scrapy_redis.queue.FifoQueue"
+# SCHEDULER_FLUSH_ON_START = True
+# SCHEDULE_PERSIST = True
