@@ -2,7 +2,6 @@
 import json
 import re
 import scrapy
-import time
 
 from scrapy_video.items import VideoItem
 
@@ -27,8 +26,7 @@ class DyttSpider(scrapy.Spider):
         #     callback=self.parse_latest_movie)
 
         yield response.follow(
-            # "http://www.ygdy8.net/html/gndy/dyzz/20091004/22009.html",
-            "http://www.ygdy8.net/html/gndy/dyzz/20091009/22123.html",
+            "http://www.ygdy8.net/html/gndy/dyzz/20091004/22009.html",
             callback=self.parse_moive_detail)
 
     def parse_latest_movie(self, response):
@@ -65,15 +63,15 @@ class DyttSpider(scrapy.Spider):
         texts = info.xpath('.//text()[normalize-space(.)]').extract()
 
         # 去掉特殊符号
-        token = ["\xa0","\u3000","ie","经典电影","幕后制作","mp4视频下载","淘宝"]
+        token = ["\xa0", "\u3000"]
         for t in token:
-            texts = [s.replace(t, '') for s in texts]  
+            texts = [s.replace(t, '') for s in texts]
 
-        texts = [s.strip() for s in texts] # 去掉首尾空格
-        texts = [s for s in texts if s ] # 去掉空字符串
+        texts = [s.strip() for s in texts]  # 去掉首尾空格
+        texts = [s for s in texts if s]  # 去掉空字符串
 
         # 去掉特殊行
-        texts = [s for s in texts if not re.match(".*(ftp://|下载地址|磁力链).*",s)]
+        texts = [s for s in texts if not re.match(".*(ftp://|下载地址|磁力链).*", s)]
         self.logger.debug(texts)
 
         patterns = {
@@ -134,22 +132,21 @@ class DyttSpider(scrapy.Spider):
                 "start": "◎标签",
                 "div": "|"
             },
-            "introduction":{
-                "start":"◎简介",
+            "introduction": {
+                "start": "◎简介",
                 "div": "/",
             },
-            "prize":{
-                "start":"◎获奖情况",
+            "prize": {
+                "start": "◎获奖情况",
                 "div": "/",
             }
         }
         # 标记各个字段的位置
-        for (idx,s) in enumerate(texts):
+        for (idx, s) in enumerate(texts):
             for (k, v) in patterns.items():
                 m = re.match(r"^({})(.*)".format(v["start"]), s)
                 if m:
                     v["idx"] = idx
-
                     break
 
         for (k, v) in patterns.items():
@@ -157,30 +154,40 @@ class DyttSpider(scrapy.Spider):
                 m = re.match(r"^({})(.*)".format(v["start"]), texts[v["idx"]])
                 movie[k] = m.groups()[1]
                 if "div" in v:
-                    movie[k] = [m.strip() for m in movie[k].split("/")]
+                    movie[k] = [m.strip() for m in movie[k].split(v["div"])]
 
         # 演员字段
         start = patterns["actors"]["idx"] + 1
-        end = patterns["introduction"]["idx"]
-        movie["actors"].extend(texts[start:end])
-        
+        for s in texts[start:]:
+            if "◎" in s:
+                break
+            else:
+                movie["actors"].append(s)
+
         # 简介字段
         start = patterns["introduction"]["idx"] + 1
-        end = patterns["prize"]["idx"] if "idx" in patterns["prize"] else len(texts)
-        movie["introduction"].extend(texts[start:end])
-            
+        for s in texts[start:]:
+            if "◎" in s:
+                break
+            else:
+                movie["introduction"].append(s)
+
+        ads = info.xpath('.//a/span/text()').extract()
+        movie["introduction"] = list(
+            set(movie["introduction"]).difference(ads))
+
         # 获奖情况
         if "idx" in patterns["prize"]:
             start = patterns["prize"]["idx"] + 1
-            movie["prize"].extend(texts[start:])
+            for s in texts[start:]:
+                if "◎" in s:
+                    break
+                else:
+                    movie["prize"].append(s)
 
         # 去掉特殊符号
-        for k in ["introduction","prize"]:
+        for k in ["introduction", "prize"]:
             if k in movie:
-                movie[k] = [s for s in movie[k] if s] # 去掉空字符串
-                for t in ["◎"]:
-                    movie[k] = [s for s in movie[k] if t not in s]
-        
-        # print(json.dumps(dict(movie), indent=4, ensure_ascii=False))
+                movie[k] = [s for s in movie[k] if s]  # 去掉空字符串
 
         yield movie
